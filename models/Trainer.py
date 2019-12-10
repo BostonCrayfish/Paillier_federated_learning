@@ -78,16 +78,49 @@ class Trainer(object):
                 bar.next()
             bar.finish()
 
-            #     if batch_idx % 10 == 0:
-            #         print('Update Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-            #             iter, batch_idx * len(images), len(self.ldr_train.dataset),
-            #                    100. * batch_idx / len(self.ldr_train), loss.item()))
-            #     batch_loss.append(loss.item())
-            # epoch_loss.append(sum(batch_loss)/len(batch_loss))
         return net.state_dict()
 
+def compute_acc(net,test_loader):
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+    net.eval()
 
-def get_net_and_trainer(model_name="mlp",dataset="mnist"):
+    end = time.time()
+    bar = Bar('Processing', max=len(test_loader))
+    for batch_idx, (inputs, targets) in enumerate(test_loader):
+        # measure data loading time
+        data_time.update(time.time() - end)
+        inputs, targets = inputs.to(device), targets.to(device)
+        # compute output
+        outputs = net(inputs)
+        prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
+        top1.update(prec1.item(), inputs.size(0))
+        top5.update(prec5.item(), inputs.size(0))
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        # plot progress
+        bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Total: {total:} | ETA: {eta:} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+                    batch=batch_idx + 1,
+                    size=len(test_loader),
+                    data=data_time.avg,
+                    total=bar.elapsed_td,
+                    eta=bar.eta_td,
+                    top1=top1.avg,
+                    top5=top5.avg,
+                    )
+        bar.next()
+    bar.finish()
+
+   
+
+
+def get_net_and_loader(model_name="mlp",dataset="mnist"):
     ### To do : get part of data
     if dataset=='mnist':
         trans_mnist = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
@@ -171,9 +204,11 @@ def mkdir_p(path):
 
 if __name__ == '__main__':
     import sys
-    net,train_loder,test_loader=get_net_and_trainer()
+    net,train_loder,test_loader=get_net_and_loader()
     trainer=Trainer(net,train_loder,test_loader,local_ep=int(sys.argv[1]))
     w=net.state_dict()
     w=trainer.train(w)
     ## w-> aggregator -> new w
     w=trainer.train(w)
+    compute_acc(net,test_loader)
+    

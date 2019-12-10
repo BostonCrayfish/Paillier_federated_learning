@@ -1,6 +1,6 @@
 from models.Trainer import *
 
-net,train_loder,test_loader=get_net_and_trainer()
+net,train_loder,test_loader=get_net_and_loader()
 trainer=Trainer(net,train_loder,test_loader)
 w=net.state_dict()
 print(w)
