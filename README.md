@@ -2,4 +2,13 @@
 
 ## Environment
 - torch>=0.4.0
-- tqdm
+- progress
+
+## Cookbook
+- run locally
+
+```python
+## parm is the number of epochs
+python -m models.Trainer 10
+
+```
