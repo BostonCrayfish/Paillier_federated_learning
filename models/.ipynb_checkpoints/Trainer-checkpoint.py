@@ -6,8 +6,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import copy
 import numpy as np
-from torchvision import transforms
-import torchvision
+from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, Dataset
 import torch
 from .Nets import *
@@ -122,28 +121,16 @@ def compute_acc(net,test_loader):
    
 
 
-def get_net_and_loader(model_name="mlp",dataset="mnist",mode="Part"):
+def get_net_and_loader(model_name="mlp",dataset="mnist"):
     ### To do : get part of data
-    if mode=="ALL":
-        if dataset=='mnist':
-            trans_mnist = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
-            dataset_train = torchvision.datasets.MNIST('./data/mnist/', train=True, download=True, transform=trans_mnist)
-            dataset_test = torchvision.datasets.MNIST('./data/mnist/', train=False, download=True, transform=trans_mnist)
-        elif dataset=='cifar':
-            trans_cifar = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-            dataset_train = torchvision.datasets.CIFAR10('./data/cifar', train=True, download=True, transform=trans_cifar)
-            dataset_test = torchvision.datasets.CIFAR10('./data/cifar', train=False, download=True, transform=trans_cifar)
-    elif mode=="Part":
-        if dataset=='mnist':
-            trans_mnist = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
-            dataset_train = torchvision.datasets.ImageFolder(root='./data/mnist/train',transform=trans_mnist)
-            dataset_test = torchvision.datasets.ImageFolder(root='./data/mnist/test_jpg',transform=trans_mnist)
-        elif dataset=='cifar':
-            trans_cifar = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-            dataset_train = torchvision.datasets.ImageFolder(root='./data/cifar/train',transform=trans_cifar)
-            dataset_train = torchvision.datasets.ImageFolder(root='./data/cifar/test_jpg',transform=trans_cifar)
-   
-
+    if dataset=='mnist':
+        trans_mnist = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
+        dataset_train = datasets.MNIST('../data/mnist/', train=True, download=True, transform=trans_mnist)
+        dataset_test = datasets.MNIST('../data/mnist/', train=False, download=True, transform=trans_mnist)
+    elif dataset=='cifar':
+        trans_cifar = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+        dataset_train = datasets.CIFAR10('../data/cifar', train=True, download=True, transform=trans_cifar)
+        dataset_test = datasets.CIFAR10('../data/cifar', train=False, download=True, transform=trans_cifar)
 
     train_loader = DataLoader(dataset_train, batch_size=128, shuffle=True)
     test_loader = DataLoader(dataset_test, batch_size=128, shuffle=True)
@@ -214,6 +201,9 @@ def mkdir_p(path):
             raise
 
             
+
+
+
 if __name__ == '__main__':
     import sys
     net,train_loder,test_loader=get_net_and_loader()
@@ -221,6 +211,6 @@ if __name__ == '__main__':
     w=net.state_dict()
     w=trainer.train(w)
     ## w-> aggregator -> new w
-    #w=trainer.train(w)
+    w=trainer.train(w)
     compute_acc(net,test_loader)
     
