@@ -33,19 +33,20 @@ class Worker(object):
             listen_worker.listen(5)
             print("Listen started")
 
-            # 等待连接，连接后返回通信用的套接字
-            sock_fd, addr = listen_worker.accept()
-            print("connected by {}".format(addr))
+            while True:
+                # 等待连接，连接后返回通信用的套接字
+                sock_fd, addr = listen_worker.accept()
+                print("connected by {}".format(addr))
 
-            try:
-                data=recv_msg(sock_fd)
-                w = pickle.loads(data)
-                w = trainer.train(w)
-                self.send_data(w)
-            except Exception as e:  # 如果出错则打印错误信息
-                traceback.print_exc()
-            finally:
-                sock_fd.close()  # 释放连接
+                try:
+                    data=recv_msg(sock_fd)
+                    w = pickle.loads(data)
+                    w = trainer.train(w)
+                    self.send_data(w)
+                except Exception as e:  # 如果出错则打印错误信息
+                    traceback.print_exc()
+                finally:
+                    sock_fd.close()  # 释放连接
         except KeyboardInterrupt:  # 如果运行时按Ctrl+C则退出程序
             pass
         except Exception as e:  # 如果出错则打印错误信息
@@ -69,7 +70,7 @@ class Worker(object):
                 #time.sleep(0.02)
                 data_send=(request,data)
                 data_send=pickle.dumps(data_send)
-                send_msg(worker_sock,data)
+                send_msg(worker_sock,data_send)
                 worker_sock.close()
                 break
             except:

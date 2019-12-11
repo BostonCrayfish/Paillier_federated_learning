@@ -16,7 +16,7 @@ import pickle
 import traceback
 
 ## 一个aggregator迭代的次数
-glob_epochs = 4
+glob_epochs = 20
 num_workers = 1
 
 
@@ -29,13 +29,13 @@ class Aggregator(object):
     
     def run(self):  
         print("Aggregator started")
-        net_glob,train_loder,test_loader=self.net_glob,self.train_loder,self.test_loader
+        net_glob,train_loader,test_loader=self.net_glob,self.train_loder,self.test_loader
         glob_w=self.glob_w
         ## 分发参数
         print('Map Step:')
         socket_list=self.send_new_data1(glob_w)
         # Debug:
-        #compute_acc(net_glob,train_loder)
+        compute_acc(net_glob,test_loader)
 
         ## 同步SGD
         w_locals = []
@@ -67,16 +67,16 @@ class Aggregator(object):
 
                     if cmd == "upload":
                         ## 接收数据
-                        w_new=requestre[1]
+                        w_new=request[1]
                         w_locals.append(w_new)
                         
                         upload_times += 1
                         response = "Upload succeeds"
-                        self.send_new_data1(self.w_glob)
+                        self.send_new_data1(self.glob_w)
 
                         if upload_times == n_nodes:
                             self.w_glob=FedAvg(w_locals)
-                            self.net_glob.load_state_dict(w_glob)
+                            self.net_glob.load_state_dict(self.w_glob)
                             compute_acc(self.net_glob,self.test_loader)
                             upload_times = 0
                             self.glob_epochs-=1
@@ -127,9 +127,9 @@ class Aggregator(object):
                 # ## To do : 其它停止条件，如超时
                 if len(socket_list)==0:
                     self.w_glob=FedAvg(w_locals)
-                    self.net_glob.load_state_dict(w_glob)
+                    self.net_glob.load_state_dict(self.w_glob)
                     compute_acc(self.net_glob,self.test_loader)
-                    socket_list=self.send_new_data2(glob_w)
+                    socket_list=self.send_new_data2(self.glob_w)
                     print("received all parm and update")
                     
             except KeyboardInterrupt:
@@ -147,7 +147,7 @@ class Aggregator(object):
 
     def send_new_data1(self,data_new):
         # data_new is a model state dict
-        print(data_new)
+        #print(data_new)
         data_new=pickle.dumps(dict(data_new))
         
         for i in range(n_nodes):
