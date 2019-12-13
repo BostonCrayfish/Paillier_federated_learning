@@ -109,8 +109,10 @@ class Aggregator(object):
         while True:
             try:
                 ### 放在while里面的逻辑太复杂了，debug都是泪
-                for data_node_sock in tqdm(socket_list):
+                for data_node_sock in socket_list:
                     response_msg = recv_msg(data_node_sock)
+                    ip=data_node_sock.getpeername()[0]
+                    print('received result from %s'%(host_ip_dict[ip]))
                     # For Debug：
                     # response_msg = pickle.dumps(glob_w)
                     request=pickle.loads(response_msg)
@@ -123,7 +125,7 @@ class Aggregator(object):
                 ### 应该写一个初始化的函数，直接调用
                 if len(socket_list)==0:
                     self.glob_w=FedAvg(w_locals)
-                    print("received all parm and update") 
+                    print("received all parm and update, Test:") 
                     self.net_glob.load_state_dict(self.glob_w)
                     compute_acc(self.net_glob,self.test_loader)
                     ## next stage
@@ -161,7 +163,7 @@ class Aggregator(object):
                     break   
                 except Exception:
                     traceback.print_exc() 
-        print("Send the parm to {}".format(list((host_list[i], worker_port[i]) for i in range(n_nodes))))
+        print("Send parms to {}".format(list((host_list[i], worker_port[i]) for i in range(n_nodes))))
 
 
     def send_new_data2(self,data_new):
