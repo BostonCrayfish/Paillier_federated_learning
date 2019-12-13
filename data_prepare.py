@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Python version: 3.6
 from models.Trainer import *
 dataset='mnist'
 class_num=10
@@ -5,7 +8,7 @@ class_num=10
 net_glob,train_loder,test_loader=get_net_and_loader(dataset=dataset,mode="ALL")
 
 traindata=train_loder.dataset.train_data
-targetdata =train_loder.dataset.targets
+targetdata =train_loder.dataset.train_labels
 
 import os
 from PIL import Image
@@ -29,6 +32,22 @@ for i in tqdm(range(len(traindata))):
     # Have Done !
     pass
 
+
+tdata=test_loader.dataset.test_data
+ttarget =test_loader.dataset.test_labels
+
+dir_name='data/{}/all_test_jpg'.format(dataset)
+    
+for i in range(class_num):
+    child_dir_name='{}/{}/'.format(dir_name,i)
+    if not os.path.isdir(child_dir_name):
+        mkdir_p(child_dir_name)
+    
+for i in tqdm(range(len(tdata))):
+    show(tdata[i],'{}/{}/{}_{}.jpg'.format(dir_name,ttarget[i],ttarget[i],i))
+    # Have Done !
+
+
 ## part data
 from models.sampling import *
 
@@ -42,11 +61,11 @@ class DatasetSplit(Dataset):
         return len(self.idxs)
 
     def __getitem__(self, item):
-        print(self.idxs[item])
+        #print(self.idxs[item])
         image, label = self.traindata[self.idxs[item]],self.targetdata[self.idxs[item]]
         return image, label
     
-def save(traindata,targetdata,dir_name):
+def save(dataset,dir_name):
     if not os.path.isdir(dir_name):
         mkdir_p(dir_name)
     
@@ -56,24 +75,21 @@ def save(traindata,targetdata,dir_name):
             mkdir_p(child_dir_name)
     
     for i in tqdm(range(len(dataset))):
-        data=traindata[i].cpu().numpy()
+        inputs,targets=dataset[i]
+        data=inputs.cpu().numpy()
         im = Image.fromarray(data)
-        path='{}/{}/{}_{}.jpg'.format(dir_name,targetdata[i],targetdata[i],i)
+        path='{}/{}/{}_{}.jpg'.format(dir_name,targets,targets,i)
         im.save(path)
 
 dict_users = mnist_iid(traindata, 4)
 
 for idx in dict_users:
     x=DatasetSplit(traindata,targetdata, dict_users[idx])
-    dir_name='data/{}/part_train_jpg/part_{}'.format(dataset,idx)
-    #save(dataset.traindata,dataset.targetdata,dir_name)
+    dir_name='data/{}/part_train_jpg/part_{}'.format(dataset,idx+1)
+    save(x,dir_name)
     #Have done!
 
-tdata=test_loader.dataset.test_data
-ttarget =test_loader.dataset.targets
 
-dir_name='data/{}/test_jpg'.format(dataset)
-save(tdata,ttarget,dir_name)
 
 
 

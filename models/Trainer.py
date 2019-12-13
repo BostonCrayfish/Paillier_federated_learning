@@ -136,11 +136,11 @@ def get_net_and_loader(model_name="mlp",dataset="mnist",mode="Part"):
     elif mode=="Part":
         if dataset=='mnist':
             trans_mnist = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
-            dataset_train = torchvision.datasets.ImageFolder(root='./data/mnist/train',transform=trans_mnist)
+            dataset_train = torchvision.datasets.ImageFolder(root='./data/mnist/train_jpg',transform=trans_mnist)
             dataset_test = torchvision.datasets.ImageFolder(root='./data/mnist/test_jpg',transform=trans_mnist)
         elif dataset=='cifar':
             trans_cifar = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-            dataset_train = torchvision.datasets.ImageFolder(root='./data/cifar/train',transform=trans_cifar)
+            dataset_train = torchvision.datasets.ImageFolder(root='./data/cifar/train_jpg',transform=trans_cifar)
             dataset_train = torchvision.datasets.ImageFolder(root='./data/cifar/test_jpg',transform=trans_cifar)
    
 
