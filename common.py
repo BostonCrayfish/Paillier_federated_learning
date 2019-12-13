@@ -23,3 +23,6 @@ host_ip_dict=dict({
     '192.168.0.103':"thumm03",
     '192.168.0.104':"thumm04",
 })
+
+## 是否使用加密算法
+paillier = True
