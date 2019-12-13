@@ -15,8 +15,7 @@ from models.utils import *
 import pickle
 import traceback
 
-## 一个aggregator迭代的次数
-glob_epochs = 20
+
 
 
 class Aggregator(object):
@@ -26,17 +25,15 @@ class Aggregator(object):
         self.glob_epochs=glob_epochs
 
     
+    ## To do ：把collect_answer直接写成run
     def run(self):  
         print("Aggregator started")
-        net_glob,train_loader,test_loader=self.net_glob,self.train_loder,self.test_loader
-        glob_w=self.glob_w
-        # Debug:
-        #compute_acc(net_glob,test_loader)
-
+        # Debug: 先计算一次精度，看看数据集情况
+        #compute_acc(net_glob,self.test_loader)
         ## 分发参数
-        self.send_new_data1(glob_w)
+        socket_list=self.send_new_data2(self.glob_w)
         ## 同步SGD
-        self.collect_answer1()
+        self.collect_answer2(socket_list)
        
 
     def collect_answer1(self):
@@ -53,7 +50,7 @@ class Aggregator(object):
                 try:
                     # 等待连接，连接后返回通信用的套接字
                     sock_fd, addr = listen_ag.accept()
-                    sock_fd.setblocking(0)
+                    #sock_fd.setblocking(0)
                     print("connected by {}".format(addr))
                     # 获取请求方发送的指令
                     request=self.upload(sock_fd)
@@ -71,16 +68,15 @@ class Aggregator(object):
 
                         ### 这个判定条件只要有一次错误就会全部GG
                         if upload_times == n_nodes:
-                            self.w_glob=FedAvg(w_locals)
+                            #self.glob_w=FedAvg(w_locals)
                             self.send_new_data1(self.glob_w)
                             w_locals=[]
-                            self.net_glob.load_state_dict(self.w_glob)
+                            self.net_glob.load_state_dict(self.glob_w)
                             compute_acc(self.net_glob,self.test_loader)
                             upload_times = 0
                             self.glob_epochs-=1
                             if self.glob_epochs==0:
-                                return 
-                            
+                                return  
                     else:  # 其他位置指令
                         response = "Undefined command: " + " ".join(request)
 
@@ -94,8 +90,8 @@ class Aggregator(object):
                     pass
                 except Exception as e:  # 如果出错则打印错误信息
                     traceback.print_exc()
-                # finally:
-                #     sock_fd.close()  # 释放连接         
+                finally:
+                    sock_fd.close()  # 释放连接         
         except KeyboardInterrupt:  # 如果运行时按Ctrl+C则退出程序
             pass
         except Exception as e:  # 如果出错则打印错误信息
@@ -112,31 +108,36 @@ class Aggregator(object):
         from tqdm import tqdm
         while True:
             try:
-                for data_node_sock in socket_list:
+                ### 放在while里面的逻辑太复杂了，debug都是泪
+                for data_node_sock in tqdm(socket_list):
                     response_msg = recv_msg(data_node_sock)
                     # For Debug：
                     # response_msg = pickle.dumps(glob_w)
-                    w_receive=pickle.loads(response_msg)
-                    ####################################
-                    w_locals.append(w_receive)
+                    request=pickle.loads(response_msg)
+                    if request[0]=='upload':
+                        w_receive=request[1]
+                        w_locals.append(w_receive)
                     data_node_sock.close()
-                    socket_list.remove(data)
-                # ## To do : 其它停止条件，如超时
+                    socket_list.remove(data_node_sock)
+
+                ### 应该写一个初始化的函数，直接调用
                 if len(socket_list)==0:
-                    self.w_glob=FedAvg(w_locals)
-                    self.net_glob.load_state_dict(self.w_glob)
-                    compute_acc(self.net_glob,self.test_loader)
-                    socket_list=self.send_new_data2(self.glob_w)
+                    self.glob_w=FedAvg(w_locals)
                     print("received all parm and update") 
+                    self.net_glob.load_state_dict(self.glob_w)
+                    compute_acc(self.net_glob,self.test_loader)
+                    ## next stage
+                    socket_list=self.send_new_data2(self.glob_w)  
             except KeyboardInterrupt:
-                break
+                exit()
             except Exception:
                 traceback.print_exc()
 
-    ### 收到空数据会出错
+    ### 收到空数据会出错,包括了反序列化的过程
+    ### Todo: 构成成对的函数，反序列化和解密写在里面，在worker里构建对应的加密和序列化函数
+    ### 不如写在utils中！
     def upload(self, sock_fd):
         data=recv_msg(sock_fd)
-        #data = sock_fd.recv(BUF_SIZE)
         data = pickle.loads(data)
         print("Data received")
         return data
@@ -172,7 +173,7 @@ class Aggregator(object):
                 try:
                     num_try -=1
                     renew_sock = socket.socket()
-                    print(host_list[i], worker_port[i])
+                    #print(host_list[i], worker_port[i])
                     renew_sock.connect((host_list[i], worker_port[i]))
                     send_msg(renew_sock,data_new)
                     socket_list.append(renew_sock)

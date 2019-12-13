@@ -42,7 +42,7 @@ class Worker(object):
                     w = pickle.loads(data)
                     w = trainer.train(w)
                     ## 序列化在send_data里面完成
-                    self.send_data(w)
+                    self.send_data2(sock_fd,w)
                 except Exception as e:  # 如果出错则打印错误信息
                     traceback.print_exc()
                 finally:
@@ -55,7 +55,7 @@ class Worker(object):
             listen_worker.close()  # 释放连接
 
 
-    def send_data(self,data):
+    def send_data1(self,data):
         request = "upload"
         num_try = 5
         
@@ -65,6 +65,27 @@ class Worker(object):
                 num_try -= 1
                 worker_sock = socket.socket()
                 worker_sock.connect((host_list[0], ag_port))
+                data_send=(request,data)
+                data_send=pickle.dumps(data_send)
+                send_msg(worker_sock,data_send)
+                worker_sock.close()
+                time.sleep(0.2)
+                break
+            except:
+                traceback.print_exc()
+        print("Send data successfully")
+
+
+    def send_data2(self,sock,data):
+        request = "upload"
+        num_try = 5
+        print("send to {} {}".format(host_list[0], ag_port))
+        while True and num_try>=0:
+            try:
+                num_try -= 1
+                # worker_sock = socket.socket()
+                # worker_sock.connect((host_list[0], ag_port))
+                worker_sock=sock
                 data_send=(request,data)
                 data_send=pickle.dumps(data_send)
                 send_msg(worker_sock,data_send)

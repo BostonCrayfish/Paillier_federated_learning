@@ -123,25 +123,26 @@ def compute_acc(net,test_loader):
 
 
 def get_net_and_loader(model_name="mlp",dataset="mnist",mode="Part"):
-    ### To do : get part of data
+    ### To do : get part of data ——> Done!
+    ### Absolute path
     if mode=="ALL":
         if dataset=='mnist':
             trans_mnist = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
-            dataset_train = torchvision.datasets.MNIST('./data/mnist/', train=True, download=True, transform=trans_mnist)
-            dataset_test = torchvision.datasets.MNIST('./data/mnist/', train=False, download=True, transform=trans_mnist)
+            dataset_train = torchvision.datasets.MNIST('/home/dsjxtjc/2019211333/Paillier_federated_learning/data/mnist/', train=True, download=True, transform=trans_mnist)
+            dataset_test = torchvision.datasets.MNIST('/home/dsjxtjc/2019211333/Paillier_federated_learning/data/mnist/', train=False, download=True, transform=trans_mnist)
         elif dataset=='cifar':
             trans_cifar = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-            dataset_train = torchvision.datasets.CIFAR10('./data/cifar', train=True, download=True, transform=trans_cifar)
-            dataset_test = torchvision.datasets.CIFAR10('./data/cifar', train=False, download=True, transform=trans_cifar)
+            dataset_train = torchvision.datasets.CIFAR10('/home/dsjxtjc/2019211333/Paillier_federated_learning/data/cifar', train=True, download=True, transform=trans_cifar)
+            dataset_test = torchvision.datasets.CIFAR10('/home/dsjxtjc/2019211333/Paillier_federated_learning/data/cifar', train=False, download=True, transform=trans_cifar)
     elif mode=="Part":
         if dataset=='mnist':
             trans_mnist = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
-            dataset_train = torchvision.datasets.ImageFolder(root='./data/mnist/train_jpg',transform=trans_mnist)
-            dataset_test = torchvision.datasets.ImageFolder(root='./data/mnist/test_jpg',transform=trans_mnist)
+            dataset_train = torchvision.datasets.ImageFolder(root='/home/dsjxtjc/2019211333/Paillier_federated_learning/data/mnist/train_jpg',transform=trans_mnist)
+            dataset_test = torchvision.datasets.ImageFolder(root='/home/dsjxtjc/2019211333/Paillier_federated_learning/data/mnist/test_jpg',transform=trans_mnist)
         elif dataset=='cifar':
             trans_cifar = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-            dataset_train = torchvision.datasets.ImageFolder(root='./data/cifar/train_jpg',transform=trans_cifar)
-            dataset_train = torchvision.datasets.ImageFolder(root='./data/cifar/test_jpg',transform=trans_cifar)
+            dataset_train = torchvision.datasets.ImageFolder(root='/home/dsjxtjc/2019211333/Paillier_federated_learning/data/cifar/train_jpg',transform=trans_cifar)
+            dataset_train = torchvision.datasets.ImageFolder(root='/home/dsjxtjc/2019211333/Paillier_federated_learning/data/cifar/test_jpg',transform=trans_cifar)
    
 
 

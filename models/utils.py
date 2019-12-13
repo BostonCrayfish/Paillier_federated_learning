@@ -32,5 +32,7 @@ def recv_msg(sock):
         while len(data) < data_size:
             part = sock.recv(BUF_SIZE)
             data.extend(part)
-    print("what's more!",sock.recv(BUF_SIZE))      
+
+    #print(pickle.loads(data))
+    #print("what's more!",sock.recv(BUF_SIZE))      
     return data
