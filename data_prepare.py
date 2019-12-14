@@ -5,6 +5,11 @@ from models.Trainer import *
 dataset='mnist'
 class_num=10
 
+
+import sys
+part_num = int(sys.argv[1])
+
+
 net_glob,train_loder,test_loader=get_net_and_loader(dataset=dataset,mode="ALL")
 
 traindata=train_loder.dataset.train_data
@@ -44,7 +49,8 @@ for i in range(class_num):
         mkdir_p(child_dir_name)
     
 for i in tqdm(range(len(tdata))):
-    show(tdata[i],'{}/{}/{}_{}.jpg'.format(dir_name,ttarget[i],ttarget[i],i))
+    #show(tdata[i],'{}/{}/{}_{}.jpg'.format(dir_name,ttarget[i],ttarget[i],i))
+    pass
     # Have Done !
 
 
@@ -81,13 +87,25 @@ def save(dataset,dir_name):
         path='{}/{}/{}_{}.jpg'.format(dir_name,targets,targets,i)
         im.save(path)
 
-dict_users = mnist_iid(traindata, 4)
+dict_users = mnist_iid(traindata, part_num)
+
+import os
+cur_dir = os.getcwd()
 
 for idx in dict_users:
     x=DatasetSplit(traindata,targetdata, dict_users[idx])
-    dir_name='data/{}/part_train_jpg/part_{}'.format(dataset,idx+1)
+    dir_name='data/{}/part_train_jpg_{}/part_{}'.format(dataset,part_num,idx+1)
     save(x,dir_name)
     #Have done!
+    send_dir_name = 'data/{}/train_jpg'.format(dataset)
+    command_send_codes = 'ssh thumm0%s "mkdir -p %s/%s ; rm -r %s/%s "; scp -r %s/%s thumm0%s:%s/%s > /dev/null &' % (idx+1, cur_dir, dir_name,
+    cur_dir,send_dir_name,cur_dir,dir_name, idx+1, cur_dir,send_dir_name)
+    os.system(command_send_codes)
+
+
+
+
+    
 
 
 

@@ -82,7 +82,7 @@ class Trainer(object):
 
         return net.state_dict()
 
-def compute_acc(net,test_loader):
+def compute_acc(net,test_loader,logger=None,best_acc=None):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -118,6 +118,8 @@ def compute_acc(net,test_loader):
                     )
         bar.next()
     bar.finish()
+    if logger is not None:
+        logger.append([top1.avg])
 
    
 
@@ -143,6 +145,10 @@ def get_net_and_loader(model_name="mlp",dataset="mnist",mode="Part"):
             trans_cifar = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
             dataset_train = torchvision.datasets.ImageFolder(root='/home/dsjxtjc/2019211333/Paillier_federated_learning/data/cifar/train_jpg',transform=trans_cifar)
             dataset_train = torchvision.datasets.ImageFolder(root='/home/dsjxtjc/2019211333/Paillier_federated_learning/data/cifar/test_jpg',transform=trans_cifar)
+        # elif dataset=='you dataname':
+        #     trans_cifar = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+        #     dataset_train = torchvision.datasets.ImageFolder(root='/home/dsjxtjc/2019211333/Paillier_federated_learning/data/cifar/train_jpg',transform=trans_cifar)
+        #     dataset_train = torchvision.datasets.ImageFolder(root='/home/dsjxtjc/2019211333/Paillier_federated_learning/data/cifar/test_jpg',transform=trans_cifar)
    
 
 
@@ -217,7 +223,8 @@ def mkdir_p(path):
             
 if __name__ == '__main__':
     import sys
-    net,train_loder,test_loader=get_net_and_loader()
+
+    net,train_loder,test_loader=get_net_and_loader(model_name=sys.argv[2],dataset=sys.argv[3],mode=sys.argv[4])
     trainer=Trainer(net,train_loder,test_loader,local_ep=int(sys.argv[1]))
     w=net.state_dict()
     w=trainer.train(w)

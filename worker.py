@@ -41,6 +41,7 @@ class Worker(object):
                 try:
                     data=recv_msg(sock_fd)
                     w = pickle.loads(data)
+                    print(w)
                     w = trainer.train(w)
                     ## 序列化在send_data里面完成
                     self.send_data2(sock_fd,w)
@@ -61,12 +62,12 @@ class Worker(object):
         request = "upload"
         num_try = 5
         
-        print("send to {} {}".format(host_list[0], ag_port))
+        print("send to {} {}".format(ag_host, ag_port))
         while True and num_try>=0:
             try:
                 num_try -= 1
                 worker_sock = socket.socket()
-                worker_sock.connect((host_list[0], ag_port))
+                worker_sock.connect((ag_host, ag_port))
                 data_send=(request,data)
                 data_send=pickle.dumps(data_send)
                 send_msg(worker_sock,data_send)
@@ -81,15 +82,16 @@ class Worker(object):
     def send_data2(self,sock,data):
         request = "upload"
         num_try = 5
-        print("send to {} {}".format(host_list[0], ag_port))
+        print("send to {} {}".format(ag_host, ag_port))
         while True and num_try>=0:
             try:
                 num_try -= 1
                 worker_sock=sock
                 data_send=(request,data) 
                 if is_paillier==True:
+                    ## 参数加上随机数
                     data = dict({key:value+torch.from_numpy(self.random_num).float() for key,value in data.items()})
-                    f = open('key/public_key', 'rb')
+                    f = open('%s/key/public_key' % (cur_dir), 'rb')
                     public_key = pickle.load(f)
                     print(self.random_num[0])
                     encrypt_random_num=public_key.encrypt(self.random_num[0].astype(np.float64))

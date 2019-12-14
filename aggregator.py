@@ -11,6 +11,7 @@ import numpy as np
 from models.Trainer import *
 from models.Federated import *
 from models.utils import *
+from models.logger import *
 
 import pickle
 import traceback
@@ -19,13 +20,19 @@ from phe import paillier
 from functools import reduce 
 
 
+
 class Aggregator(object):
-    def __init__(self):
+    def __init__(self,glob_epochs=20,dataset='mnist',net_glob='mlp',itype='iid'):
         self.net_glob,self.train_loder,self.test_loader=get_net_and_loader()
         self.glob_w=self.net_glob.state_dict()
         self.glob_epochs=glob_epochs
+        dir_name = 'checkpoint/aggregator/{}-{}-{}{}p'.format(dataset,net_glob,itype,n_nodes)
+        if not os.path.isdir(dir_name):
+            mkdir_p(dir_name)
+        self.logger = Logger(os.path.join(dir_name, 'log.txt'), title='{}-{}'.format(dataset,net_glob))
+        self.logger.set_names(['test Acc'])
 
-    
+
     ## To do ：把collect_answer直接写成run
     def run(self):  
         print("Aggregator started")
@@ -107,6 +114,7 @@ class Aggregator(object):
         encrypt_random_num_locals=[]
         net_glob,train_loder,test_loader=self.net_glob,self.train_loder,self.test_loader
         glob_w=self.glob_w
+        epoch = 1
         from tqdm import tqdm
         while True:
             try:
@@ -132,7 +140,7 @@ class Aggregator(object):
                     self.glob_w=FedAvg(w_locals)
                     #### 实际上aggregator没有密钥，这里是为了查看实验结果
                     if is_paillier==True:
-                        f = open('key/private_key', 'rb')
+                        f = open('%s/key/private_key' % (cur_dir), 'rb')
                         private_key = pickle.load(f)
                         ## 随机数密钥求和
                         encrypt_random_sum=reduce(lambda x, y: x + y, encrypt_random_num_locals)
@@ -142,11 +150,15 @@ class Aggregator(object):
                         ## 参数平均值减去密钥平均值
                         self.glob_w = dict({key: (value - random_avg) for key,value in self.glob_w.items()})
 
-                    print("received all parm and update, Test:") 
+                    print("Epoch:{}/{} Received all parm and update, Test:".format(epoch,self.glob_epochs)) 
+                    epoch +=1
                     self.net_glob.load_state_dict(self.glob_w)
-                    compute_acc(self.net_glob,self.test_loader)
+                    compute_acc(self.net_glob,self.test_loader,self.logger)
+                    if epoch == self.glob_epochs:
+                        break
                     ## next stage
-                    socket_list=self.send_new_data2(self.glob_w)  
+                    socket_list=self.send_new_data2(self.glob_w) 
+                    
             except KeyboardInterrupt:
                 exit()
             except Exception:
@@ -200,11 +212,15 @@ class Aggregator(object):
                 except Exception:
                     traceback.print_exc() 
         print("Send the parm to {}".format(list((host_list[i], worker_port[i]) for i in range(n_nodes))))
+        if len(socket_list)==0:
+            print("No workers!")
+            exit()
         return socket_list
 
 
 
 
-
-aggr = Aggregator()
-aggr.run()
+if __name__ == '__main__':
+    import os
+    aggr = Aggregator()
+    aggr.run()

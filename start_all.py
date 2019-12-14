@@ -12,7 +12,7 @@ for slave in host_list:
     os.system(command_start)
 
 
-time.sleep(2)
+time.sleep(5)
 # start aggregator
 command_start = 'python3 %s/aggregator.py' % cur_dir
 # #print('command to start name node: ', command_start)
