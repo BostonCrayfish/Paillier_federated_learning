@@ -15,7 +15,8 @@ from models.utils import *
 import pickle
 import traceback
 
-
+from phe import paillier
+from functools import reduce 
 
 
 class Aggregator(object):
@@ -53,7 +54,7 @@ class Aggregator(object):
                     #sock_fd.setblocking(0)
                     print("connected by {}".format(addr))
                     # 获取请求方发送的指令
-                    request=self.upload(sock_fd)
+                    request=self.ag_receive(sock_fd)
                     #request = str(sock_fd.recv(128), encoding='utf-8')
                     #request = request.split()  # 指令之间使用空白符分割
                     #print("Request: {}".format(request))
@@ -103,6 +104,7 @@ class Aggregator(object):
  
     def collect_answer2(self,socket_list):
         w_locals=[]
+        encrypt_random_num_locals=[]
         net_glob,train_loder,test_loader=self.net_glob,self.train_loder,self.test_loader
         glob_w=self.glob_w
         from tqdm import tqdm
@@ -110,21 +112,36 @@ class Aggregator(object):
             try:
                 ### 放在while里面的逻辑太复杂了，debug都是泪
                 for data_node_sock in socket_list:
-                    response_msg = recv_msg(data_node_sock)
+                    request=self.ag_receive(data_node_sock)
                     ip=data_node_sock.getpeername()[0]
                     print('received result from %s'%(host_ip_dict[ip]))
                     # For Debug：
                     # response_msg = pickle.dumps(glob_w)
-                    request=pickle.loads(response_msg)
+                    # request=pickle.loads(response_msg)
                     if request[0]=='upload':
                         w_receive=request[1]
                         w_locals.append(w_receive)
+                        if is_paillier==True:
+                           encrypt_random_num_locals.append(request[2])     
+
                     data_node_sock.close()
                     socket_list.remove(data_node_sock)
 
                 ### 应该写一个初始化的函数，直接调用
                 if len(socket_list)==0:
                     self.glob_w=FedAvg(w_locals)
+                    #### 实际上aggregator没有密钥，这里是为了查看实验结果
+                    if is_paillier==True:
+                        f = open('key/private_key', 'rb')
+                        private_key = pickle.load(f)
+                        ## 随机数密钥求和
+                        encrypt_random_sum=reduce(lambda x, y: x + y, encrypt_random_num_locals)
+                        ## 和密码解密/结点数目 = 随机数平均值
+                        random_avg = private_key.decrypt(encrypt_random_sum)/len(encrypt_random_num_locals)
+                        print(random_avg)
+                        ## 参数平均值减去密钥平均值
+                        self.glob_w = dict({key: (value - random_avg) for key,value in self.glob_w.items()})
+
                     print("received all parm and update, Test:") 
                     self.net_glob.load_state_dict(self.glob_w)
                     compute_acc(self.net_glob,self.test_loader)
@@ -136,12 +153,11 @@ class Aggregator(object):
                 traceback.print_exc()
 
     ### 收到空数据会出错,包括了反序列化的过程
-    ### Todo: 构成成对的函数，反序列化和解密写在里面，在worker里构建对应的加密和序列化函数
-    ### 不如写在utils中！
-    def upload(self, sock_fd):
+    ### Todo: 构成成对的函数，反序列化写在里面，在worker里构建对应的加密和序列化函数
+    def ag_receive(self, sock_fd):
         data=recv_msg(sock_fd)
         data = pickle.loads(data)
-        print("Data received")
+        #print("Data received")
         return data
 
     def send_new_data1(self,data_new):

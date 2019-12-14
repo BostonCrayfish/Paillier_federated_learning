@@ -6,8 +6,8 @@ BUF_SIZE = 40960
 
 n_nodes = 4
 ag_host = 'thumm01'
-ag_port = 22222
-worker_port = [10111, 10112, 10113,10114]
+ag_port = 11111
+worker_port = [40001, 20002, 20003,20004]
 
 #获取计算机名称
 host_name=socket.gethostname()
@@ -25,4 +25,4 @@ host_ip_dict=dict({
 })
 
 ## 是否使用加密算法
-paillier = True
+is_paillier = True

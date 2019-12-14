@@ -20,17 +20,19 @@ class Worker(object):
     def __init__(self):
         self.net_glob,self.train_loder,self.test_loader=get_net_and_loader()
         self.trainer=Trainer(self.net_glob,self.train_loder,self.test_loader)
+        if is_paillier==True:
+            self.random_num=np.random.randn(1)
 
     def run(self):
         listen_worker = socket.socket()
         trainer=self.trainer
         try:
             # 监听端口
+            print("Listen started at port:%s"%(worker_port[node_NO]))
             listen_worker.bind(("0.0.0.0", worker_port[node_NO]))
             # For Debug
             #listen_worker.bind(("0.0.0.0", debug_port))
             listen_worker.listen(5)
-            print("Listen started at port:%s"%(worker_port[node_NO]))
 
             while True:
                 # 等待连接，连接后返回通信用的套接字
@@ -38,7 +40,6 @@ class Worker(object):
                 print("connected by {}".format(addr))
                 try:
                     data=recv_msg(sock_fd)
-                    print("+++++++++++++++++++++")
                     w = pickle.loads(data)
                     w = trainer.train(w)
                     ## 序列化在send_data里面完成
@@ -48,12 +49,13 @@ class Worker(object):
                 finally:
                     sock_fd.close()  # 释放连接
         except KeyboardInterrupt:  # 如果运行时按Ctrl+C则退出程序
-            pass
+            listen_worker.close()  # 释放连接
         except Exception as e:  # 如果出错则打印错误信息
             traceback.print_exc()
         finally:
             listen_worker.close()  # 释放连接
 
+    
 
     def send_data1(self,data):
         request = "upload"
@@ -83,10 +85,16 @@ class Worker(object):
         while True and num_try>=0:
             try:
                 num_try -= 1
-                # worker_sock = socket.socket()
-                # worker_sock.connect((host_list[0], ag_port))
                 worker_sock=sock
-                data_send=(request,data)
+                data_send=(request,data) 
+                if is_paillier==True:
+                    data = dict({key:value+torch.from_numpy(self.random_num).float() for key,value in data.items()})
+                    f = open('key/public_key', 'rb')
+                    public_key = pickle.load(f)
+                    print(self.random_num[0])
+                    encrypt_random_num=public_key.encrypt(self.random_num[0].astype(np.float64))
+                    data_send=(request,data,encrypt_random_num)
+
                 data_send=pickle.dumps(data_send)
                 send_msg(worker_sock,data_send)
                 worker_sock.close()
