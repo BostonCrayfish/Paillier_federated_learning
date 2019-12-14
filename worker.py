@@ -41,7 +41,6 @@ class Worker(object):
                 try:
                     data=recv_msg(sock_fd)
                     w = pickle.loads(data)
-                    print(w)
                     w = trainer.train(w)
                     ## 序列化在send_data里面完成
                     self.send_data2(sock_fd,w)

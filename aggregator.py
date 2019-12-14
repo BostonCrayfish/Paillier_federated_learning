@@ -18,6 +18,7 @@ import traceback
 
 from phe import paillier
 from functools import reduce 
+import time 
 
 
 
@@ -30,7 +31,8 @@ class Aggregator(object):
         if not os.path.isdir(dir_name):
             mkdir_p(dir_name)
         self.logger = Logger(os.path.join(dir_name, 'log.txt'), title='{}-{}'.format(dataset,net_glob))
-        self.logger.set_names(['test Acc'])
+        self.logger.set_names(['test Acc','time'])
+        self.time_start=time.time()
 
 
     ## To do ：把collect_answer直接写成run
@@ -153,7 +155,8 @@ class Aggregator(object):
                     print("Epoch:{}/{} Received all parm and update, Test:".format(epoch,self.glob_epochs)) 
                     epoch +=1
                     self.net_glob.load_state_dict(self.glob_w)
-                    compute_acc(self.net_glob,self.test_loader,self.logger)
+                    end_time = time.time()
+                    compute_acc(self.net_glob,self.test_loader,self.logger,end_time-self.time_start)
                     if epoch == self.glob_epochs:
                         break
                     ## next stage

@@ -18,14 +18,16 @@ import os
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class Trainer(object):
-    def __init__(self,net=None,train_loader=None,test_loader=None,local_ep=1):
+    def __init__(self,net=None,train_loader=None,test_loader=None,local_ep=1,batch_each_epoch=10):
         self.loss_func = nn.CrossEntropyLoss()
         self.selected_clients = []
-        self.ldr_train = train_loader
+        self.ldr_train = iter(train_loader)
+        #next_data = next(self.loader)
         self.ldr_test = test_loader
         self.optimizer = torch.optim.SGD(net.parameters(), lr=0.1, momentum=0.5)
         self.net = net
         self.local_ep=local_ep
+        self.batch_each_epoch = batch_each_epoch
 
     def train(self, w=None):
         net = self.net
@@ -35,6 +37,7 @@ class Trainer(object):
         
         # train and update
         epoch_loss = []
+
         for iter in range(self.local_ep):
 
             batch_time = AverageMeter()
@@ -47,7 +50,12 @@ class Trainer(object):
             bar = Bar('Processing', max=len(self.ldr_train))
 
             batch_loss = []
-            for batch_idx, (images, labels) in enumerate(self.ldr_train):
+
+            #for batch_idx, (images, labels) in enumerate(self.ldr_train):
+
+            for batch_idx in range(self.batch_each_epoch):
+                images, labels = next(self.ldr_train)
+            
                 data_time.update(time.time() - end)
                 
                 images, labels = images.to(device), labels.to(device)
@@ -82,7 +90,7 @@ class Trainer(object):
 
         return net.state_dict()
 
-def compute_acc(net,test_loader,logger=None,best_acc=None):
+def compute_acc(net,test_loader,logger=None,time_waste=None):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -119,7 +127,8 @@ def compute_acc(net,test_loader,logger=None,best_acc=None):
         bar.next()
     bar.finish()
     if logger is not None:
-        logger.append([top1.avg])
+        #logger.append([top1.avg,time_waste])
+        pass
 
    
 
@@ -223,9 +232,12 @@ def mkdir_p(path):
             
 if __name__ == '__main__':
     import sys
-
-    net,train_loder,test_loader=get_net_and_loader(model_name=sys.argv[2],dataset=sys.argv[3],mode=sys.argv[4])
-    trainer=Trainer(net,train_loder,test_loader,local_ep=int(sys.argv[1]))
+    if len(sys.argv)==5:
+        net,train_loder,test_loader=get_net_and_loader(model_name=sys.argv[2],dataset=sys.argv[3],mode=sys.argv[4])
+        trainer=Trainer(net,train_loder,test_loader,local_ep=int(sys.argv[1]))
+    else:
+        net,train_loder,test_loader=get_net_and_loader()
+        trainer=Trainer(net,train_loder,test_loader)
     w=net.state_dict()
     w=trainer.train(w)
     ## w-> aggregator -> new w
