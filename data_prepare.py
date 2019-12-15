@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Python version: 3.6
+from common import *
 from models.Trainer import *
-dataset='mnist'
+dataset='cifar'
 class_num=10
 
 
@@ -20,7 +21,10 @@ from PIL import Image
 from tqdm import tqdm
 
 def show(x,i):
-    data=x.cpu().numpy()
+    if dataset=='mnist':
+        data=x.cpu().numpy()
+    elif dataset=='cifar':
+        data=x
     im = Image.fromarray(data)
     im.save(i)
     
@@ -34,8 +38,8 @@ for i in range(class_num):
     
 for i in tqdm(range(len(traindata))):
     #show(traindata[i],'{}/{}/{}_{}.jpg'.format(dir_name,targetdata[i],targetdata[i],i))
-    # Have Done !
     pass
+    # Have Done !
 
 
 tdata=test_loader.dataset.test_data
@@ -82,7 +86,12 @@ def save(dataset,dir_name):
     
     for i in tqdm(range(len(dataset))):
         inputs,targets=dataset[i]
-        data=inputs.cpu().numpy()
+
+        if dataset=='mnist':
+            data=inputs.cpu().numpy()
+        else:
+            data=inputs
+            
         im = Image.fromarray(data)
         path='{}/{}/{}_{}.jpg'.format(dir_name,targets,targets,i)
         im.save(path)
@@ -92,15 +101,33 @@ dict_users = mnist_iid(traindata, part_num)
 import os
 cur_dir = os.getcwd()
 
+command_send_codes = 'rm -r data/{}/part_train_jpg_{}'.format(dataset,str(part_num))
+os.system(command_send_codes)
+
 for idx in dict_users:
     x=DatasetSplit(traindata,targetdata, dict_users[idx])
     dir_name='data/{}/part_train_jpg_{}/part_{}'.format(dataset,part_num,idx+1)
+ 
     save(x,dir_name)
     #Have done!
     send_dir_name = 'data/{}/train_jpg'.format(dataset)
-    command_send_codes = 'ssh thumm0%s "mkdir -p %s/%s ; rm -r %s/%s "; scp -r %s/%s thumm0%s:%s/%s > /dev/null &' % (idx+1, cur_dir, dir_name,
-    cur_dir,send_dir_name,cur_dir,dir_name, idx+1, cur_dir,send_dir_name)
+    # command_send_codes = 'ssh %s "rm -r %s/%s "; scp -r %s/%s %s:%s/%s > /dev/null &' % (host_list[idx], 
+    #     cur_dir, send_dir_name,cur_dir,dir_name,host_list[idx], cur_dir,send_dir_name)
+    command_send_codes = 'ssh %s "mkdir -p %s/%s "; scp -r %s/%s %s:%s/%s > /dev/null &' % (host_list[idx], 
+        cur_dir, send_dir_name,cur_dir,dir_name,host_list[idx], cur_dir,send_dir_name)
+    print(command_send_codes)
     os.system(command_send_codes)
+
+    send_dir_name = 'data/{}/test_jpg'.format(dataset)
+    command_send_codes = 'scp -r %s/%s %s:%s/%s > /dev/null &' % ( 
+        cur_dir,send_dir_name,host_list[idx], cur_dir,send_dir_name)
+
+    print(command_send_codes)
+    os.system(command_send_codes)
+
+    
+    
+    
 
 
 

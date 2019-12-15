@@ -11,7 +11,7 @@ import sys
 
 # start current node as name node
 
-for slave in host_list:
+for slave in all_host_list:
     if 'thumm01' not in slave:
         print('sending codes to slave [%s]' % slave)
         if sys.argv[1]=='all':

@@ -1,10 +1,10 @@
 import socket
 
 # 集群中的主机列表
-all_host_list = ['thumm01','thumm02', 'thumm03','thumm04','thumm05', 'thumm06','thumm07']
-all_worker_port = [12121, 11132, 11133,11134,11135,11136,11137]
+all_host_list = ['thumm02', 'thumm03','thumm04','thumm05', 'thumm06','thumm07']
+all_worker_port = [11132, 11133,11134,11135,11136,11137]
 
-n_nodes = 2
+n_nodes = 4
 host_list = all_host_list[:n_nodes]
 worker_port = all_worker_port[:n_nodes]
 
@@ -13,9 +13,6 @@ BUF_SIZE = 40960
 ag_host = 'thumm01'
 ag_port = 11111
 
-#获取计算机名称
-host_name=socket.gethostname()
-node_NO = host_list.index(host_name) #本机序号，0~n_nodes-1
 
 ## 一个aggregator迭代的次数
 glob_epochs = 20

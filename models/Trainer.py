@@ -14,22 +14,24 @@ from .Nets import *
 from progress.bar import Bar
 import time
 import os
+import copy
+from itertools import cycle
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class Trainer(object):
-    def __init__(self,net=None,train_loader=None,test_loader=None,local_ep=1,batch_each_epoch=10):
+    def __init__(self,net=None,train_loader=None,test_loader=None,local_ep=1,batch_each_epoch=100):
         self.loss_func = nn.CrossEntropyLoss()
         self.selected_clients = []
-        self.ldr_train = iter(train_loader)
-        #next_data = next(self.loader)
+        self.ldr_train = cycle(train_loader)
+        self.ldr_train_iter = iter(self.ldr_train)
         self.ldr_test = test_loader
         self.optimizer = torch.optim.SGD(net.parameters(), lr=0.1, momentum=0.5)
         self.net = net
         self.local_ep=local_ep
         self.batch_each_epoch = batch_each_epoch
 
-    def train(self, w=None):
+    def train(self, w=None,logger=None):
         net = self.net
         if w!=None:
             net.load_state_dict(w)
@@ -47,14 +49,16 @@ class Trainer(object):
             top5 = AverageMeter()
             end = time.time()
 
-            bar = Bar('Processing', max=len(self.ldr_train))
+            bar = Bar('Train', max=self.batch_each_epoch)
+            bar.width=16
 
             batch_loss = []
 
             #for batch_idx, (images, labels) in enumerate(self.ldr_train):
 
             for batch_idx in range(self.batch_each_epoch):
-                images, labels = next(self.ldr_train)
+                images, labels = next(self.ldr_train_iter)
+
             
                 data_time.update(time.time() - end)
                 
@@ -75,22 +79,20 @@ class Trainer(object):
                 batch_time.update(time.time() - end)
                 end = time.time()
 
-                bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+                bar.suffix  = '({batch}/{size}) Total: {total:} | top1: {top1: .4f} | top5: {top5: .4f} | Loss: {loss:.4f} '.format(
                     batch=batch_idx + 1,
-                    size=len(self.ldr_train),
-                    data=data_time.avg,
+                    size=self.batch_each_epoch,
                     total=bar.elapsed_td,
-                    eta=bar.eta_td,
-                    loss=losses.avg,
                     top1=top1.avg,
                     top5=top5.avg,
+                    loss=losses.avg,
                     )
                 bar.next()
             bar.finish()
 
         return net.state_dict()
 
-def compute_acc(net,test_loader,logger=None,time_waste=None):
+def compute_acc(net,test_loader,logger=None,time_waste=None,loss_func=nn.CrossEntropyLoss()):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -99,13 +101,18 @@ def compute_acc(net,test_loader,logger=None,time_waste=None):
     net.eval()
 
     end = time.time()
-    bar = Bar('Processing', max=len(test_loader))
+    bar = Bar('Test:', max=len(test_loader))
+    bar.width=16
     for batch_idx, (inputs, targets) in enumerate(test_loader):
         # measure data loading time
         data_time.update(time.time() - end)
         inputs, targets = inputs.to(device), targets.to(device)
         # compute output
         outputs = net(inputs)
+
+        loss = loss_func(outputs, targets)
+        losses.update(loss.data.item(), inputs.size(0))
+
         prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
         top1.update(prec1.item(), inputs.size(0))
         top5.update(prec5.item(), inputs.size(0))
@@ -115,20 +122,18 @@ def compute_acc(net,test_loader,logger=None,time_waste=None):
         end = time.time()
 
         # plot progress
-        bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Total: {total:} | ETA: {eta:} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+        bar.suffix  = '({batch}/{size}) Total: {total:} | top1: {top1: .4f} | top5: {top5: .4f} | Loss: {loss:.4f}'.format(
                     batch=batch_idx + 1,
                     size=len(test_loader),
-                    data=data_time.avg,
                     total=bar.elapsed_td,
-                    eta=bar.eta_td,
                     top1=top1.avg,
                     top5=top5.avg,
+                    loss=losses.avg,
                     )
         bar.next()
     bar.finish()
     if logger is not None:
-        #logger.append([top1.avg,time_waste])
-        pass
+        logger.append([top1.avg,losses.avg,time_waste])
 
    
 
@@ -153,7 +158,7 @@ def get_net_and_loader(model_name="mlp",dataset="mnist",mode="Part"):
         elif dataset=='cifar':
             trans_cifar = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
             dataset_train = torchvision.datasets.ImageFolder(root='/home/dsjxtjc/2019211333/Paillier_federated_learning/data/cifar/train_jpg',transform=trans_cifar)
-            dataset_train = torchvision.datasets.ImageFolder(root='/home/dsjxtjc/2019211333/Paillier_federated_learning/data/cifar/test_jpg',transform=trans_cifar)
+            dataset_test = torchvision.datasets.ImageFolder(root='/home/dsjxtjc/2019211333/Paillier_federated_learning/data/cifar/test_jpg',transform=trans_cifar)
         # elif dataset=='you dataname':
         #     trans_cifar = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
         #     dataset_train = torchvision.datasets.ImageFolder(root='/home/dsjxtjc/2019211333/Paillier_federated_learning/data/cifar/train_jpg',transform=trans_cifar)
@@ -232,15 +237,31 @@ def mkdir_p(path):
             
 if __name__ == '__main__':
     import sys
-    if len(sys.argv)==5:
-        net,train_loder,test_loader=get_net_and_loader(model_name=sys.argv[2],dataset=sys.argv[3],mode=sys.argv[4])
-        trainer=Trainer(net,train_loder,test_loader,local_ep=int(sys.argv[1]))
+    from models.logger import *
+
+    dataset = sys.argv[3]
+    net_glob = sys.argv[2]
+    mode = sys.argv[4]
+
+    if len(sys.argv)==6:
+        net,train_loder,test_loader=get_net_and_loader(model_name=net_glob,dataset=dataset,mode=mode)
+        trainer=Trainer(net,train_loder,test_loader,batch_each_epoch=int(sys.argv[5]))
     else:
-        net,train_loder,test_loader=get_net_and_loader()
-        trainer=Trainer(net,train_loder,test_loader)
+        print('Error!')
+        exit
+    print(len(train_loder.dataset))
     w=net.state_dict()
-    w=trainer.train(w)
-    ## w-> aggregator -> new w
-    #w=trainer.train(w)
-    compute_acc(net,test_loader)
+    
+    dir_name = 'checkpoint/trainer/{}-{}-{}'.format(dataset,net_glob,mode)
+    if not os.path.isdir(dir_name):
+        mkdir_p(dir_name)
+    logger = Logger(os.path.join(dir_name, 'log.txt'), title='{}-{}'.format(dataset,net_glob))
+    logger.set_names(['test Acc','test Loss','time'])
+    time_start=time.time()
+
+    for i in range(int(sys.argv[1])):
+        print('Epoch:%s'%(i))
+        w=trainer.train(w)
+        net.load_state_dict(w)
+        compute_acc(net,test_loader,logger,time.time()-time_start)
     

@@ -15,11 +15,14 @@ import pickle
 import traceback
 from models.utils import *
 
+#获取计算机名称
+host_name=socket.gethostname()
+node_NO = host_list.index(host_name) #本机序号，0~n_nodes-1
 
 class Worker(object):
-    def __init__(self):
-        self.net_glob,self.train_loder,self.test_loader=get_net_and_loader()
-        self.trainer=Trainer(self.net_glob,self.train_loder,self.test_loader)
+    def __init__(self,dataset='mnist',net_glob='mlp',itype='iid',batch_each_epoch=100):
+        self.net_glob,self.train_loder,self.test_loader=get_net_and_loader(model_name=net_glob,dataset=dataset)
+        self.trainer=Trainer(self.net_glob,self.train_loder,self.test_loader,batch_each_epoch=batch_each_epoch)
         if is_paillier==True:
             self.random_num=np.random.randn(1)
 
@@ -106,5 +109,14 @@ class Worker(object):
         print("Send data successfully")
 
 
-worker=Worker()
-worker.run()
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(description='Worker')
+    parser.add_argument('--dataset', default='mnist', type=str)
+    parser.add_argument('--model', default='mlp', type=str)
+    parser.add_argument('--itype', default='iid', type=str)
+    parser.add_argument('--l_batch',default=400,type=int)
+    args = parser.parse_args()
+
+    worker=Worker(dataset=args.dataset,net_glob=args.model,itype=args.itype,batch_each_epoch=args.l_batch)
+    worker.run()

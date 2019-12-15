@@ -23,15 +23,15 @@ import time
 
 
 class Aggregator(object):
-    def __init__(self,glob_epochs=20,dataset='mnist',net_glob='mlp',itype='iid'):
-        self.net_glob,self.train_loder,self.test_loader=get_net_and_loader()
+    def __init__(self,glob_epochs=200,dataset='mnist',net_glob='mlp',itype='iid'):
+        self.net_glob,self.train_loder,self.test_loader=get_net_and_loader(model_name=net_glob,dataset=dataset)
         self.glob_w=self.net_glob.state_dict()
         self.glob_epochs=glob_epochs
         dir_name = 'checkpoint/aggregator/{}-{}-{}{}p'.format(dataset,net_glob,itype,n_nodes)
         if not os.path.isdir(dir_name):
             mkdir_p(dir_name)
         self.logger = Logger(os.path.join(dir_name, 'log.txt'), title='{}-{}'.format(dataset,net_glob))
-        self.logger.set_names(['test Acc','time'])
+        self.logger.set_names(['test Acc','test Loss','time'])
         self.time_start=time.time()
 
 
@@ -225,5 +225,14 @@ class Aggregator(object):
 
 if __name__ == '__main__':
     import os
-    aggr = Aggregator()
+    
+    import argparse
+    parser = argparse.ArgumentParser(description='Worker')
+    parser.add_argument('--dataset', default='mnist', type=str)
+    parser.add_argument('--model', default='mlp', type=str)
+    parser.add_argument('--itype', default='iid', type=str)
+    parser.add_argument('--epoch',default=50,type=int)
+    args = parser.parse_args()
+
+    aggr = Aggregator(glob_epochs=args.epoch,dataset=args.dataset,net_glob=args.model,itype=args.itype)
     aggr.run()
