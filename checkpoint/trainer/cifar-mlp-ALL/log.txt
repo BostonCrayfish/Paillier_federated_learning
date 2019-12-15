@@ -1,2 +1,0 @@
-test Acc	test Loss	time	
-36.480000	2.096668	72.015757	
